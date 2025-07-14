@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة المستذئب</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1f2937">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+        .page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        dialog::backdrop {
+            background: rgba(0, 0, 0, 0.7);
+        }
+        .touch-action-manipulation {
+             touch-action: manipulation;
+        }
+    </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div id="app-container">
+        <!-- Page 1: Welcome -->
+        <div id="page-welcome" class="page p-6">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-red-500">🐺 المستذئب</h1>
+                <p class="text-gray-400 mt-2">مساعد اللعبة</p>
+            </div>
+
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
+                <label for="player-count-input" class="block text-lg font-medium mb-2">كم عدد اللاعبين؟</label>
+                <input type="number" id="player-count-input" class="w-full bg-gray-700 text-white p-3 rounded-md border border-gray-600 focus:ring-2 focus:ring-red-500 focus:border-red-500 text-center text-xl" placeholder="مثال: 8">
+                <button id="welcome-next-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg mt-4 transition duration-300 touch-action-manipulation disabled:bg-gray-500 disabled:cursor-not-allowed">التالي</button>
+            </div>
+
+            <div class="flex flex-col space-y-4 mt-auto">
+                <button id="new-game-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 touch-action-manipulation">بدء لعبة جديدة</button>
+                <button id="last-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 touch-action-manipulation hidden">آخر مباراة</button>
+                <button id="history-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 touch-action-manipulation">📖 سجل الألعاب</button>
+            </div>
+        </div>
+
+        <!-- Page 2: Role Setup -->
+        <div id="page-roles" class="page p-4 hidden">
+            <!-- Header will be inserted by JS -->
+            <div id="roles-header-container"></div>
+            <div id="roles-progress-container" class="sticky top-[70px] bg-gray-900 py-2 z-10"></div>
+            <div id="roles-list" class="flex-grow grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4">
+                <!-- Role cards will be inserted by JS -->
+            </div>
+            <div class="sticky bottom-0 bg-gray-900 py-4 px-2 mt-auto">
+                <button id="roles-add-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg mb-2 transition duration-300 touch-action-manipulation">➕ إضافة دور جديد</button>
+                <button id="roles-next-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 touch-action-manipulation disabled:bg-gray-500 disabled:cursor-not-allowed">التالي</button>
+            </div>
+        </div>
+
+        <!-- Page 3: Assign Roles -->
+        <div id="page-assign" class="page p-6 justify-between hidden">
+            <!-- Header will be inserted by JS -->
+            <div id="assign-header-container"></div>
+            <div id="assign-progress-container" class="text-center my-4"></div>
+            <div id="assign-content" class="flex flex-col items-center justify-center flex-grow">
+                <!-- Content will be inserted by JS -->
+            </div>
+            <div id="assign-footer" class="mt-auto w-full">
+                 <!-- Button will be inserted by JS -->
+            </div>
+        </div>
+
+        <!-- Page 4: Summary -->
+        <div id="page-summary" class="page p-4 hidden">
+             <!-- Header will be inserted by JS -->
+             <div id="summary-header-container"></div>
+             <div id="summary-content" class="flex-grow overflow-y-auto"></div>
+             <div class="sticky bottom-0 bg-gray-900 py-4 px-2 mt-auto flex space-x-4 space-x-reverse">
+                <button id="summary-replay-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 touch-action-manipulation">إعادة اللعب</button>
+                <button id="summary-home-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 touch-action-manipulation">العودة للرئيسية</button>
+             </div>
+        </div>
+
+        <!-- Page 5: History List -->
+        <div id="page-history-list" class="page p-4 hidden">
+            <!-- Header will be inserted by JS -->
+            <div id="history-list-header-container"></div>
+            <div id="history-list-content" class="flex-grow"></div>
+        </div>
+
+        <!-- Page 6: History Detail -->
+        <div id="page-history-detail" class="page p-4 hidden">
+            <!-- Header will be inserted by JS -->
+            <div id="history-detail-header-container"></div>
+            <div id="history-detail-content" class="flex-grow overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <dialog id="confirm-dialog" class="bg-gray-800 text-white rounded-lg p-6 w-11/12 max-w-sm">
+        <h3 id="confirm-title" class="text-xl font-bold mb-4"></h3>
+        <p id="confirm-message" class="mb-6"></p>
+        <div class="flex justify-end space-x-4 space-x-reverse">
+            <button id="confirm-cancel-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-300 touch-action-manipulation">إلغاء</button>
+            <button id="confirm-ok-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-300 touch-action-manipulation">تأكيد</button>
+        </div>
+    </dialog>
+
+    <dialog id="edit-role-dialog" class="bg-gray-800 text-white rounded-lg p-6 w-11/12 max-w-sm">
+        <form id="edit-role-form">
+            <h3 id="edit-role-title" class="text-xl font-bold mb-4">تعديل الدور</h3>
+            <input type="hidden" id="edit-role-id">
+            
+            <label for="edit-role-name" class="block mb-1">اسم الدور</label>
+            <input type="text" id="edit-role-name" required class="w-full bg-gray-700 text-white p-2 rounded mb-4">
+
+            <label for="edit-role-emoji" class="block mb-1">الإيموجي</label>
+            <input type="text" id="edit-role-emoji" required class="w-full bg-gray-700 text-white p-2 rounded mb-4">
+            
+            <label for="edit-role-team" class="block mb-1">الفريق</label>
+            <select id="edit-role-team" class="w-full bg-gray-700 text-white p-2 rounded mb-4">
+                <option value="أخيار">أخيار</option>
+                <option value="أشرار">أشرار</option>
+            </select>
+            
+            <label for="edit-role-color" class="block mb-1">اللون</label>
+            <input type="color" id="edit-role-color" class="w-full h-10 p-1 bg-gray-700 rounded mb-4">
+
+            <div class="flex justify-end space-x-4 space-x-reverse mt-6">
+                <button type="button" id="edit-role-cancel-btn" class="bg-gray-600 hover:bg-gray-700 font-bold py-2 px-4 rounded transition duration-300 touch-action-manipulation">إلغاء</button>
+                <button type="submit" class="bg-green-600 hover:bg-green-700 font-bold py-2 px-4 rounded transition duration-300 touch-action-manipulation">حفظ</button>
+            </div>
+        </form>
+    </dialog>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').then(registration => {
+                console.log('SW registered: ', registration);
+            }).catch(registrationError => {
+                console.log('SW registration failed: ', registrationError);
+            });
+        });
+    }
+
+    const app = {
+        // DOM Elements
+        pages: {
+            welcome: document.getElementById('page-welcome'),
+            roles: document.getElementById('page-roles'),
+            assign: document.getElementById('page-assign'),
+            summary: document.getElementById('page-summary'),
+            historyList: document.getElementById('page-history-list'),
+            historyDetail: document.getElementById('page-history-detail'),
+        },
+        buttons: {
+            welcomeNext: document.getElementById('welcome-next-btn'),
+            newGame: document.getElementById('new-game-btn'),
+            lastGame: document.getElementById('last-game-btn'),
+            history: document.getElementById('history-btn'),
+            rolesNext: document.getElementById('roles-next-btn'),
+            rolesAdd: document.getElementById('roles-add-btn'),
+            summaryReplay: document.getElementById('summary-replay-btn'),
+            summaryHome: document.getElementById('summary-home-btn'),
+        },
+        inputs: {
+            playerCount: document.getElementById('player-count-input'),
+        },
+        containers: {
+            rolesList: document.getElementById('roles-list'),
+            rolesProgress: document.getElementById('roles-progress-container'),
+            assignContent: document.getElementById('assign-content'),
+            assignProgress: document.getElementById('assign-progress-container'),
+            assignFooter: document.getElementById('assign-footer'),
+            summaryContent: document.getElementById('summary-content'),
+            historyListContent: document.getElementById('history-list-content'),
+            historyDetailContent: document.getElementById('history-detail-content'),
+        },
+        dialogs: {
+            confirm: document.getElementById('confirm-dialog'),
+            editRole: document.getElementById('edit-role-dialog'),
+        },
+
+        // State
+        state: {
+            config: {
+                roles: [],
+            },
+            gameSetup: {
+                playerCount: null,
+                selectedRoles: {}, // {roleId: count}
+            },
+            activeGame: null, // { id, date, players: [{name, roleId, warnings, isEliminated}], rolePool: [], playerCount }
+            history: [],
+        },
+
+        navigationStack: [],
+        
+        getActivePageId() {
+            for (const pageId in this.pages) {
+                if (this.pages[pageId] && !this.pages[pageId].classList.contains('hidden')) {
+                    return pageId;
+                }
+            }
+            return null;
+        },
+
+        // --- Core Methods ---
+        init() {
+            this.loadState();
+            this.addEventListeners();
+            this.renderWelcomePage();
+            console.log("App Initialized");
+        },
+
+        saveState() {
+            try {
+                localStorage.setItem('loupGarouState_v2', JSON.stringify(this.state));
+                 console.log("State saved.");
+            } catch (e) {
+                console.error("Failed to save state:", e);
+            }
+        },
+
+        loadState() {
+            const savedState = localStorage.getItem('loupGarouState_v2');
+            if (savedState) {
+                this.state = JSON.parse(savedState);
+            } else {
+                this.state.config.roles = this.getDefaultRoles();
+            }
+             // Ensure roles are never empty after loading
+            if (!this.state.config.roles || this.state.config.roles.length === 0) {
+                this.state.config.roles = this.getDefaultRoles();
+            }
+        },
+        
+        // --- Navigation ---
+        navigateTo(pageId) {
+            const currentPageId = this.getActivePageId();
+            if (currentPageId && currentPageId !== pageId) {
+                this.navigationStack.push(currentPageId);
+            }
+
+            Object.values(this.pages).forEach(page => page.classList.add('hidden'));
+            
+            if (this.pages[pageId]) {
+                this.pages[pageId].classList.remove('hidden');
+            } else {
+                console.error(`Navigation error: Page with id "${pageId}" not found.`);
+                this.pages.welcome.classList.remove('hidden'); // Fallback to welcome page
+            }
+            
+            window.scrollTo(0, 0);
+
+            // Render specific page content
+            switch (pageId) {
+                case 'welcome': this.renderWelcomePage(); break;
+                case 'roles': this.renderRolesPage(); break;
+                case 'assign': this.renderAssignPage(); break;
+                case 'summary': this.renderSummaryPage(this.state.activeGame.id); break;
+                case 'historyList': this.renderHistoryListPage(); break;
+                case 'historyDetail': /* Handled by viewHistoryDetail call */ break;
+            }
+        },
+
+        navigateBack() {
+            if (this.navigationStack.length > 0) {
+                const previousPageId = this.navigationStack.pop();
+                Object.values(this.pages).forEach(page => page.classList.add('hidden'));
+                if (this.pages[previousPageId]) {
+                    this.pages[previousPageId].classList.remove('hidden');
+                    window.scrollTo(0, 0);
+                } else {
+                    console.error(`Navigate back error: Page with id "${previousPageId}" not found in stack.`);
+                    this.goHome(); // Fallback
+                }
+            } else {
+                this.goHome();
+            }
+        },
+
+        goHome() {
+            this.navigationStack = [];
+            Object.values(this.pages).forEach(page => page.classList.add('hidden'));
+            this.pages.welcome.classList.remove('hidden');
+            window.scrollTo(0, 0);
+            this.renderWelcomePage();
+        },
+        
+        createHeader(pageTitle, showBack = true, showHome = true) {
+            let backButton = showBack ? `<button onclick="app.navigateBack()" class="text-3xl touch-action-manipulation">🔙</button>` : '<div></div>';
+            let rightButton = showHome ? `<button onclick="app.navigateBack()" class="text-3xl touch-action-manipulation">🏠</button>` : '<div></div>';
+            
+            return `
+                <header class="sticky top-0 bg-gray-800 p-4 shadow-md z-20 flex justify-between items-center">
+                    ${backButton}
+                    <h2 class="text-2xl font-bold text-center">${pageTitle}</h2>
+                    ${rightButton}
+                </header>
+            `;
+        },
+
+        // --- Event Listeners ---
+        addEventListeners() {
+            // Welcome Page
+            this.buttons.welcomeNext.addEventListener('click', () => {
+                const count = parseInt(this.inputs.playerCount.value, 10);
+                if (count > 0) {
+                    this.state.gameSetup.playerCount = count;
+                    this.state.activeGame = null; // Reset any active game
+                    // Reset role counts if starting a setup from scratch
+                    this.state.gameSetup.selectedRoles = {};
+                    this.saveState();
+                    this.navigateTo('roles');
+                }
+            });
+
+            this.inputs.playerCount.addEventListener('input', () => {
+                this.buttons.welcomeNext.disabled = !this.inputs.playerCount.value || parseInt(this.inputs.playerCount.value, 10) <= 0;
+            });
+            
+            this.buttons.newGame.addEventListener('click', () => {
+                this.showConfirmation('بدء لعبة جديدة؟', 'هل أنت متأكد؟ سيتم مسح الإعدادات الحالية.', () => {
+                    this.state.gameSetup.playerCount = null;
+                    this.state.gameSetup.selectedRoles = {};
+                    this.state.activeGame = null;
+                    this.inputs.playerCount.value = '';
+                    this.buttons.welcomeNext.disabled = true;
+                    this.saveState();
+                    this.goHome();
+                });
+            });
+
+            this.buttons.lastGame.addEventListener('click', () => {
+                if(this.state.history.length > 0) {
+                    const lastGameId = this.state.history[0].id;
+                    this.state.activeGame = JSON.parse(JSON.stringify(this.state.history[0])); // Load last game as active
+                    this.saveState();
+                    this.navigateTo('summary');
+                }
+            });
+            
+            this.buttons.history.addEventListener('click', () => this.navigateTo('historyList'));
+
+            // Roles Page
+            this.buttons.rolesNext.addEventListener('click', () => {
+                const totalRoles = Object.values(this.state.gameSetup.selectedRoles).reduce((a, b) => a + b, 0);
+                if (totalRoles === this.state.gameSetup.playerCount) {
+                    this.prepareGame();
+                    this.navigateTo('assign');
+                }
+            });
+            this.buttons.rolesAdd.addEventListener('click', () => this.showEditRoleDialog());
+            
+            // Summary Page
+            this.buttons.summaryReplay.addEventListener('click', () => {
+                 this.showConfirmation('إعادة اللعب؟', 'سيتم إعادة تعيين الإنذارات والإقصاءات لهذه اللعبة.', () => {
+                    this.state.activeGame.players.forEach(p => {
+                        p.warnings = 0;
+                        p.isEliminated = false;
+                    });
+                    this.updateGameInHistory(this.state.activeGame);
+                    this.renderSummaryPage(this.state.activeGame.id);
+                });
+            });
+            this.buttons.summaryHome.addEventListener('click', () => this.goHome());
+            
+            // Dialogs
+            this.dialogs.confirm.querySelector('#confirm-cancel-btn').addEventListener('click', () => this.dialogs.confirm.close());
+            this.dialogs.editRole.querySelector('#edit-role-cancel-btn').addEventListener('click', () => this.dialogs.editRole.close());
+            this.dialogs.editRole.querySelector('form').addEventListener('submit', (e) => this.handleRoleFormSubmit(e));
+        },
+        
+        // --- Page Renderers ---
+        renderWelcomePage() {
+            this.inputs.playerCount.value = '';
+            this.buttons.welcomeNext.disabled = true;
+            if (this.state.history.length > 0) {
+                this.buttons.lastGame.classList.remove('hidden');
+            } else {
+                this.buttons.lastGame.classList.add('hidden');
+            }
+        },
+
+        renderRolesPage() {
+            document.getElementById('roles-header-container').innerHTML = this.createHeader('إعداد الأدوار');
+            const totalRoles = Object.values(this.state.gameSetup.selectedRoles).reduce((a, b) => a + b, 0);
+            const playerCount = this.state.gameSetup.playerCount;
+            const progressColor = totalRoles === playerCount ? 'text-green-400' : 'text-yellow-400';
+
+            this.containers.rolesProgress.innerHTML = `
+                <div class="bg-gray-800 p-3 rounded-lg text-center">
+                    <p class="text-xl font-bold ${progressColor}">${totalRoles} / ${playerCount}</p>
+                    <p class="text-sm text-gray-400">مجموع الأدوار المختارة</p>
+                </div>
+            `;
+
+            this.containers.rolesList.innerHTML = '';
+            this.state.config.roles.forEach(role => {
+                const count = this.state.gameSetup.selectedRoles[role.id] || 0;
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-lg shadow-lg flex flex-col text-white relative overflow-hidden`;
+                card.style.backgroundColor = role.color;
+                card.innerHTML = `
+                    <div class="flex-grow text-center mb-2">
+                        <div class="text-4xl">${role.emoji}</div>
+                        <div class="font-bold text-lg">${role.name}</div>
+                    </div>
+                    <div class="flex justify-between items-center bg-black bg-opacity-30 p-2 rounded-md">
+                        <button class="w-8 h-8 rounded-full bg-red-600 text-white font-bold text-xl touch-action-manipulation" data-action="decrease" data-role-id="${role.id}">-</button>
+                        <span class="text-xl font-bold">${count}</span>
+                        <button class="w-8 h-8 rounded-full bg-green-600 text-white font-bold text-xl touch-action-manipulation" data-action="increase" data-role-id="${role.id}">+</button>
+                    </div>
+                    <div class="absolute top-1 left-1 flex flex-col space-y-1">
+                        <button class="w-6 h-6 rounded-full bg-black bg-opacity-50 flex items-center justify-center text-xs touch-action-manipulation" data-action="edit" data-role-id="${role.id}">✏️</button>
+                        <button class="w-6 h-6 rounded-full bg-black bg-opacity-50 flex items-center justify-center text-xs touch-action-manipulation" data-action="delete" data-role-id="${role.id}">🗑️</button>
+                    </div>
+                `;
+                this.containers.rolesList.appendChild(card);
+            });
+            this.buttons.rolesNext.disabled = totalRoles !== playerCount;
+            this.addRoleCardListeners();
+        },
+
+        addRoleCardListeners() {
+            this.containers.rolesList.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const action = e.currentTarget.dataset.action;
+                    const roleId = e.currentTarget.dataset.roleId;
+                    this.handleRoleAction(action, roleId);
+                });
+            });
+        },
+        
+        renderAssignPage() {
+            document.getElementById('assign-header-container').innerHTML = this.createHeader('توزيع الأدوار');
+            const game = this.state.activeGame;
+            if (!game) return;
+
+            const assignedCount = game.players.length;
+            const totalCount = game.playerCount;
+            const remaining = totalCount - assignedCount;
+
+            this.containers.assignProgress.innerHTML = `
+                <p class="text-xl">اللاعب ${assignedCount + 1} من ${totalCount}</p>
+                <p class="text-gray-400">متبقي ${remaining} لاعبين</p>
+            `;
+            
+            this.containers.assignFooter.innerHTML = '';
+
+            if (remaining > 0) {
+                 this.containers.assignContent.innerHTML = `
+                    <div class="w-full max-w-sm">
+                        <label for="player-name-input" class="block text-lg font-medium mb-2 text-center">أدخل اسم اللاعب</label>
+                        <input type="text" id="player-name-input" class="w-full bg-gray-700 text-white p-3 rounded-md border border-gray-600 focus:ring-2 focus:ring-red-500 focus:border-red-500 text-center text-xl">
+                    </div>
+                 `;
+                 const assignBtn = document.createElement('button');
+                 assignBtn.id = 'assign-role-btn';
+                 assignBtn.className = 'w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-lg mt-4 transition duration-300 touch-action-manipulation disabled:bg-gray-500';
+                 assignBtn.textContent = '🎲 ما هو دوره؟';
+                 assignBtn.disabled = true;
+                 this.containers.assignFooter.appendChild(assignBtn);
+                 
+                 const nameInput = document.getElementById('player-name-input');
+                 nameInput.addEventListener('input', () => {
+                     assignBtn.disabled = !nameInput.value.trim();
+                 });
+                 nameInput.focus();
+                 assignBtn.addEventListener('click', () => this.assignRoleToPlayer());
+
+            } else {
+                this.containers.assignContent.innerHTML = `<p class="text-2xl text-green-400">تم توزيع جميع الأدوار!</p>`;
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg mt-auto transition duration-300 touch-action-manipulation';
+                nextBtn.textContent = 'التالي';
+                nextBtn.onclick = () => {
+                    this.startGame();
+                };
+                this.containers.assignFooter.appendChild(nextBtn);
+            }
+        },
+        
+        renderSummaryPage(gameId) {
+            const game = this.state.activeGame;
+            if (!game || game.id !== gameId) return;
+            
+            document.getElementById('summary-header-container').innerHTML = this.createHeader('ملخص اللعبة', true, true);
+            const getRole = (roleId) => this.state.config.roles.find(r => r.id === roleId);
+
+            const playersHtml = game.players.map((player, index) => {
+                const role = getRole(player.roleId);
+                const eliminatedClass = player.isEliminated ? 'opacity-40 grayscale' : '';
+                const roleColorStyle = role ? `background-color: ${role.color};` : 'background-color: #374151;';
+                return `
+                    <div class="p-3 rounded-lg flex items-center justify-between text-white ${eliminatedClass}" style="${roleColorStyle}">
+                        <div class="flex items-center space-x-3 space-x-reverse">
+                            <div class="text-3xl" style="filter: drop-shadow(0 0 3px rgba(0,0,0,0.5));">${role.emoji}</div>
+                            <div>
+                                <p class="font-bold text-lg">${player.name}</p>
+                                <p class="text-sm opacity-80">${role.name}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 space-x-reverse">
+                            <div class="flex items-center space-x-1 space-x-reverse ${player.isEliminated ? 'invisible' : ''}">
+                                <button class="w-7 h-7 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-lg touch-action-manipulation" onclick="app.updateWarning(${index}, -1)">-</button>
+                                <span class="font-bold w-6 text-center text-lg" style="text-shadow: 0 0 5px #facc15;">${player.warnings}</span>
+                                <button class="w-7 h-7 flex items-center justify-center rounded-full bg-green-600 text-white font-bold text-lg touch-action-manipulation" onclick="app.updateWarning(${index}, 1)">+</button>
+                            </div>
+                            <button class="text-2xl touch-action-manipulation" onclick="app.toggleElimination(${index})">${player.isEliminated ? '♻️' : '⚰️'}</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            const goodCount = game.players.filter(p => !p.isEliminated && getRole(p.roleId).team === 'أخيار').length;
+            const evilCount = game.players.filter(p => !p.isEliminated && getRole(p.roleId).team === 'أشرار').length;
+            const wolves = game.players.filter(p => getRole(p.roleId)?.name.includes('ذئب') || getRole(p.roleId)?.name.includes('الذئب'));
+
+            const wolvesHtml = wolves.map(player => {
+                const role = getRole(player.roleId);
+                const eliminatedClass = player.isEliminated ? 'opacity-40 grayscale line-through' : '';
+                return `<li class="flex items-center space-x-2 space-x-reverse ${eliminatedClass}">
+                    <span>${role.emoji}</span>
+                    <span>${player.name}</span>
+                    <span class="text-gray-400 text-sm">(${role.name})</span>
+                </li>`;
+            }).join('');
+            
+            this.containers.summaryContent.innerHTML = `
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-green-800/50 p-4 rounded-lg text-center">
+                        <p class="text-3xl font-bold">${goodCount}</p>
+                        <p>الأخيار</p>
+                    </div>
+                    <div class="bg-red-800/50 p-4 rounded-lg text-center">
+                        <p class="text-3xl font-bold">${evilCount}</p>
+                        <p>الأشرار</p>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800 p-4 rounded-lg mb-4">
+                    <h3 class="text-xl font-bold mb-2">🐺 الذئاب</h3>
+                    <ul class="space-y-1">${wolvesHtml}</ul>
+                </div>
+                
+                <h3 class="text-xl font-bold mb-2">اللاعبون</h3>
+                <div class="space-y-2">${playersHtml}</div>
+            `;
+        },
+        
+        renderHistoryListPage() {
+            document.getElementById('history-list-header-container').innerHTML = this.createHeader('سجل الألعاب');
+            if (this.state.history.length === 0) {
+                this.containers.historyListContent.innerHTML = `<p class="text-center text-gray-400 mt-8">لا يوجد سجلات ألعاب بعد.</p>`;
+                return;
+            }
+            
+            const historyHtml = this.state.history.map((game) => {
+                const roleCount = game.players.length;
+                const gameDate = new Date(game.date).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+                return `
+                    <div class="bg-gray-800 p-4 rounded-lg flex justify-between items-center mb-3">
+                        <div>
+                           <p class="font-bold text-lg">لعبة بتاريخ ${gameDate}</p>
+                           <p class="text-sm text-gray-400">${game.playerCount} لاعبين, ${roleCount} أدوار</p>
+                        </div>
+                        <div class="flex items-center space-x-2 space-x-reverse">
+                            <button class="bg-blue-600 text-white py-2 px-3 rounded touch-action-manipulation" onclick="app.viewHistoryDetail(${game.id})">عرض</button>
+                            <button class="bg-red-600 text-white py-2 px-3 rounded touch-action-manipulation" onclick="app.deleteHistoryItem(${game.id})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            this.containers.historyListContent.innerHTML = historyHtml;
+        },
+
+        renderHistoryDetailPage(gameId) {
+            const game = this.state.history.find(g => g.id === gameId);
+            if (!game) {
+                this.containers.historyDetailContent.innerHTML = `<p class="text-center text-gray-400 mt-8">اللعبة غير موجودة.</p>`;
+                return;
+            }
+            
+            document.getElementById('history-detail-header-container').innerHTML = this.createHeader('تفاصيل اللعبة', true, true);
+            
+            const getRole = (roleId) => this.state.config.roles.find(r => r.id === roleId);
+
+            const playersHtml = game.players.map(player => {
+                const role = getRole(player.roleId);
+                const eliminatedClass = player.isEliminated ? 'opacity-40 grayscale' : '';
+                const roleColorStyle = role ? `background-color: ${role.color};` : 'background-color: #374151;';
+                return `
+                    <div class="p-3 rounded-lg flex items-center justify-between text-white ${eliminatedClass}" style="${roleColorStyle}">
+                        <div class="flex items-center space-x-3 space-x-reverse">
+                            <div class="text-3xl" style="filter: drop-shadow(0 0 3px rgba(0,0,0,0.5));">${role.emoji}</div>
+                            <div>
+                                <p class="font-bold text-lg">${player.name}</p>
+                                <p class="text-sm opacity-80">${role.name}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3 space-x-reverse">
+                             <span class="font-bold text-lg" style="text-shadow: 0 0 5px #facc15;">🟨 ${player.warnings}</span>
+                            ${player.isEliminated ? '<span class="text-2xl">⚰️</span>' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            const goodCount = game.players.filter(p => !p.isEliminated && getRole(p.roleId)?.team === 'أخيار').length;
+            const evilCount = game.players.filter(p => !p.isEliminated && getRole(p.roleId)?.team === 'أشرار').length;
+            const wolves = game.players.filter(p => getRole(p.roleId)?.name.includes('ذئب'));
+
+            const wolvesHtml = wolves.map(player => {
+                const role = getRole(player.roleId);
+                const eliminatedClass = player.isEliminated ? 'opacity-40 grayscale line-through' : '';
+                return `<li class="flex items-center space-x-2 space-x-reverse ${eliminatedClass}">
+                    <span>${role.emoji}</span>
+                    <span>${player.name}</span>
+                    <span class="text-gray-400 text-sm">(${role.name})</span>
+                </li>`;
+            }).join('');
+            
+            this.containers.historyDetailContent.innerHTML = `
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-green-800/50 p-4 rounded-lg text-center">
+                        <p class="text-3xl font-bold">${goodCount}</p>
+                        <p>الأخيار</p>
+                    </div>
+                    <div class="bg-red-800/50 p-4 rounded-lg text-center">
+                        <p class="text-3xl font-bold">${evilCount}</p>
+                        <p>الأشرار</p>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800 p-4 rounded-lg mb-4">
+                    <h3 class="text-xl font-bold mb-2">🐺 الذئاب</h3>
+                    <ul class="space-y-1">${wolvesHtml}</ul>
+                </div>
+                
+                <h3 class="text-xl font-bold mb-2">اللاعبون</h3>
+                <div class="space-y-2">${playersHtml}</div>
+            `;
+        },
+
+
+        // --- Game Logic ---
+        handleRoleAction(action, roleId) {
+            let count = this.state.gameSetup.selectedRoles[roleId] || 0;
+            const totalRoles = Object.values(this.state.gameSetup.selectedRoles).reduce((a, b) => a + b, 0);
+
+            switch(action) {
+                case 'increase':
+                    if (totalRoles < this.state.gameSetup.playerCount) {
+                        this.state.gameSetup.selectedRoles[roleId] = count + 1;
+                    }
+                    break;
+                case 'decrease':
+                    if (count > 0) {
+                        this.state.gameSetup.selectedRoles[roleId] = count - 1;
+                    }
+                    break;
+                case 'edit':
+                    this.showEditRoleDialog(roleId);
+                    return; // Don't re-render yet
+                case 'delete':
+                    this.showConfirmation('حذف الدور؟', 'هل أنت متأكد من حذف هذا الدور نهائياً؟', () => {
+                        this.state.config.roles = this.state.config.roles.filter(r => r.id !== roleId);
+                        delete this.state.gameSetup.selectedRoles[roleId];
+                        this.saveState();
+                        this.renderRolesPage();
+                    });
+                    return; // Don't re-render yet
+            }
+            this.saveState();
+            this.renderRolesPage();
+        },
+        
+        prepareGame() {
+            const rolePool = [];
+            for (const [roleId, count] of Object.entries(this.state.gameSetup.selectedRoles)) {
+                for (let i = 0; i < count; i++) {
+                    rolePool.push(roleId);
+                }
+            }
+            
+            // Fisher-Yates Shuffle
+            for (let i = rolePool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [rolePool[i], rolePool[j]] = [rolePool[j], rolePool[i]];
+            }
+            
+            this.state.activeGame = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                players: [],
+                rolePool: rolePool,
+                playerCount: this.state.gameSetup.playerCount
+            };
+            this.saveState();
+        },
+
+        assignRoleToPlayer() {
+            const nameInput = document.getElementById('player-name-input');
+            const name = nameInput.value.trim();
+            if (!name) return;
+
+            const roleId = this.state.activeGame.rolePool[this.state.activeGame.players.length];
+            const role = this.getRoleById(roleId);
+
+            this.containers.assignContent.innerHTML = `
+                <div class="text-center w-full max-w-sm">
+                    <p class="text-2xl font-bold mb-4">${name}, هذا هو دورك:</p>
+                    <div class="p-6 rounded-lg shadow-lg flex flex-col text-white items-center" style="background-color: ${role.color};">
+                        <div class="text-6xl">${role.emoji}</div>
+                        <div class="font-bold text-3xl mt-2">${role.name}</div>
+                        <div class="text-lg mt-1">(${role.team})</div>
+                    </div>
+                </div>
+            `;
+            
+            this.containers.assignFooter.innerHTML = '';
+            const confirmBtn = document.createElement('button');
+            confirmBtn.className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-4 rounded-lg mt-4 transition duration-300 touch-action-manipulation';
+            confirmBtn.textContent = 'تأكيد ✅';
+            confirmBtn.onclick = () => {
+                this.state.activeGame.players.push({ name, roleId, warnings: 0, isEliminated: false });
+                this.saveState();
+                this.renderAssignPage();
+            };
+            this.containers.assignFooter.appendChild(confirmBtn);
+        },
+        
+        startGame() {
+            const existingIndex = this.state.history.findIndex(g => g.id === this.state.activeGame.id);
+            if(existingIndex > -1) {
+                this.state.history[existingIndex] = JSON.parse(JSON.stringify(this.state.activeGame));
+            } else {
+                this.state.history.unshift(JSON.parse(JSON.stringify(this.state.activeGame)));
+            }
+            this.saveState();
+            this.navigateTo('summary');
+        },
+
+        updateWarning(playerIndex, change) {
+            const player = this.state.activeGame.players[playerIndex];
+            const newWarnings = player.warnings + change;
+            if (newWarnings >= 0) { // Cannot have negative warnings
+                player.warnings = newWarnings;
+                this.updateGameInHistory(this.state.activeGame);
+                this.renderSummaryPage(this.state.activeGame.id);
+            }
+        },
+
+        toggleElimination(playerIndex) {
+            this.state.activeGame.players[playerIndex].isEliminated = !this.state.activeGame.players[playerIndex].isEliminated;
+            this.updateGameInHistory(this.state.activeGame);
+            this.renderSummaryPage(this.state.activeGame.id);
+        },
+
+        deleteHistoryItem(gameId) {
+            this.showConfirmation('حذف المباراة؟', 'هل أنت متأكد من حذف هذه المباراة من السجل؟', () => {
+                this.state.history = this.state.history.filter(g => g.id !== gameId);
+                this.saveState();
+                this.renderHistoryListPage();
+            });
+        },
+        
+        viewHistoryDetail(gameId) {
+            this.navigateTo('historyDetail');
+            this.renderHistoryDetailPage(gameId);
+        },
+
+        updateGameInHistory(gameToUpdate) {
+            const index = this.state.history.findIndex(g => g.id === gameToUpdate.id);
+            if (index !== -1) {
+                this.state.history[index] = JSON.parse(JSON.stringify(gameToUpdate));
+                this.saveState();
+            }
+        },
+
+        // --- Dialogs & Forms ---
+        showConfirmation(title, message, onConfirm) {
+            this.dialogs.confirm.querySelector('#confirm-title').textContent = title;
+            this.dialogs.confirm.querySelector('#confirm-message').textContent = message;
+            
+            const confirmBtn = this.dialogs.confirm.querySelector('#confirm-ok-btn');
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+            newConfirmBtn.addEventListener('click', () => {
+                onConfirm();
+                this.dialogs.confirm.close();
+            });
+            
+            this.dialogs.confirm.showModal();
+        },
+
+        showEditRoleDialog(roleId = null) {
+            const form = this.dialogs.editRole.querySelector('form');
+            form.reset();
+            const title = this.dialogs.editRole.querySelector('#edit-role-title');
+            
+            if (roleId) {
+                const role = this.getRoleById(roleId);
+                title.textContent = 'تعديل الدور';
+                document.getElementById('edit-role-id').value = role.id;
+                document.getElementById('edit-role-name').value = role.name;
+                document.getElementById('edit-role-emoji').value = role.emoji;
+                document.getElementById('edit-role-team').value = role.team;
+                document.getElementById('edit-role-color').value = this.rgbToHex(role.color) || '#ff0000';
+            } else {
+                title.textContent = 'إضافة دور جديد';
+                document.getElementById('edit-role-id').value = '';
+                document.getElementById('edit-role-color').value = `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`;
+            }
+            this.dialogs.editRole.showModal();
+        },
+
+        handleRoleFormSubmit(event) {
+            event.preventDefault();
+            const id = document.getElementById('edit-role-id').value;
+            const name = document.getElementById('edit-role-name').value.trim();
+            const emoji = document.getElementById('edit-role-emoji').value.trim();
+            const team = document.getElementById('edit-role-team').value;
+            const color = document.getElementById('edit-role-color').value;
+
+            if (!name || !emoji) return;
+
+            if (id) { // Editing existing role
+                const role = this.getRoleById(id);
+                if(role) {
+                    role.name = name;
+                    role.emoji = emoji;
+                    role.team = team;
+                    role.color = color;
+                }
+            } else { // Adding new role
+                const newRole = {
+                    id: `custom_${Date.now()}`,
+                    name,
+                    emoji,
+                    team,
+                    color,
+                };
+                this.state.config.roles.push(newRole);
+            }
+            this.saveState();
+            this.dialogs.editRole.close();
+            this.renderRolesPage();
+        },
+        
+        // --- Helpers ---
+        getRoleById(roleId) {
+            return this.state.config.roles.find(r => r.id === roleId);
+        },
+
+        getDefaultRoles() {
+            return [
+                { id: 'werewolf', name: 'الذئب', team: 'أشرار', emoji: '🐺', color: '#7f1d1d' },
+                { id: 'white_werewolf', name: 'الذئب الأبيض', team: 'أشرار', emoji: '🌕', color: '#52525b' },
+                { id: 'seer', name: 'الشوافة', team: 'أخيار', emoji: '🔮', color: '#6d28d9' },
+                { id: 'witch', name: 'الساحرة', team: 'أخيار', emoji: '🪄', color: '#4338ca' },
+                { id: 'hunter', name: 'الصياد', team: 'أخيار', emoji: '🏹', color: '#b45309' },
+                { id: 'savior', name: 'المنقذ', team: 'أخيار', emoji: '🧑‍⚕️', color: '#15803d' },
+                { id: 'cupid', name: 'كيوبيد', team: 'أخيار', emoji: '💘', color: '#be185d' },
+                { id: 'crow', name: 'الغراب', team: 'أخيار', emoji: '🐦‍⬛', color: '#374151' },
+                { id: 'villager', name: 'قروي', team: 'أخيار', emoji: '🧑‍🌾', color: '#1d4ed8' },
+            ];
+        },
+
+        rgbToHex(rgbString) {
+            if (!rgbString || rgbString.startsWith('#')) return rgbString;
+            const match = rgbString.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (!match) return rgbString;
+            function toHex(c) {
+                const hex = parseInt(c).toString(16);
+                return hex.length == 1 ? "0" + hex : hex;
+            }
+            return "#" + toHex(match[1]) + toHex(match[2]) + toHex(match[3]);
+        },
+    };
+
+    app.init();
+    
+    // Make app global for inline event handlers
+    window.app = app;
+});
+</script>
+
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
